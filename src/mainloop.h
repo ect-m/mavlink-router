@@ -33,6 +33,7 @@
 struct Configuration {
     std::string conf_file_name;        ///< CLI "conf-file" only!
     std::string conf_dir;              ///< CLI "conf-dir" only!
+    std::string tcp_host{"0.0.0.0"};      ///< conf "TcpServerHost" or CLI "tcp-host"
     unsigned long tcp_port{5760};      ///< conf "TcpServerPort" or CLI "tcp-port"
     bool report_msg_statistics{false}; ///< conf "ReportStats" or CLI "report_msg_statistics"
     Log::Level debug_log_level{Log::Level::INFO}; ///< conf "DebugLogLevel" or CLI "debug-log-level"
@@ -124,7 +125,7 @@ private:
 
     int _retcode;
 
-    int tcp_open(unsigned long tcp_port);
+    int tcp_open(unsigned long tcp_port, const std::string &tcp_host = "");
     void _del_timeouts();
     bool _retry_timeout_cb(void *data);
     bool _log_aggregate_timeout(void *data);

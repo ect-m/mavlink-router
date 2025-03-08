@@ -59,6 +59,19 @@ By default the build type is settled to "debugoptimized". It can be changed
 with `--buildtype=release`, see [Meson documentation](https://mesonbuild.com/Builtin-options.html#core-options)
 for more options.
 
+#### Build Options
+
+MAVLink Router supports the following build options:
+
+- `-Dstatic=true|false`: Build statically linked binaries (default: true)
+- `-Dtests=true|false`: Build test programs (default: false)
+
+For example, to build a dynamic version with tests:
+
+    $ meson setup build -Dstatic=false -Dtests=true
+
+Note that building tests with static linking requires static versions of the GTest libraries to be installed on your system.
+
 Installation location can be changed using the -Dprefix option to `meson setup`.
 
 Build:

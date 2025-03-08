@@ -2,3 +2,13 @@ option('systemdsystemunitdir',
        description: 'systemd unit directory',
        type: 'string',
        value: 'auto')
+
+option('static',
+       description: 'Build statically linked binaries',
+       type: 'boolean',
+       value: 'true')
+
+option('tests',
+       description: 'Build test programs',
+       type: 'boolean',
+       value: 'false')

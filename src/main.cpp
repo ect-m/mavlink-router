@@ -45,6 +45,7 @@ static const struct option long_options[] = {{"endpoints", required_argument, nu
                                              {"conf-file", required_argument, nullptr, 'c'},
                                              {"conf-dir", required_argument, nullptr, 'd'},
                                              {"report_msg_statistics", no_argument, nullptr, 'r'},
+                                             {"tcp-host", required_argument, nullptr, 'o'},
                                              {"tcp-port", required_argument, nullptr, 't'},
                                              {"tcp-endpoint", required_argument, nullptr, 'p'},
                                              {"log", required_argument, nullptr, 'l'},
@@ -56,7 +57,7 @@ static const struct option long_options[] = {{"endpoints", required_argument, nu
                                              {"sniffer-sysid", required_argument, nullptr, 's'},
                                              {}};
 
-static const char *short_options = "he:rt:c:d:l:p:g:vV:s:T:y";
+static const char *short_options = "he:rt:c:d:l:p:g:vVs:To:y";
 
 static void help(FILE *fp)
 {
@@ -73,6 +74,9 @@ static void help(FILE *fp)
         "  -p --tcp-endpoint <ip:port>  Add TCP endpoint client, which will connect to given\n"
         "                               address\n"
         "  -r --report_msg_statistics   Report message statistics\n"
+        "  -o --tcp-host <port>         Host in which mavlink-router will listen for TCP\n"
+        "                               connections.\n"
+        "                               Default port 0.0.0.0\n"
         "  -t --tcp-port <port>         Port in which mavlink-router will listen for TCP\n"
         "                               connections. Pass 0 to disable TCP listening.\n"
         "                               Default port 5760\n"
@@ -232,6 +236,15 @@ static int parse_argv(int argc, char *argv[], Configuration &config)
         case 't': {
             if (safe_atoul(optarg, &config.tcp_port) < 0) {
                 log_error("Invalid argument for tcp-port = %s", optarg);
+                help(stderr);
+                return -EINVAL;
+            }
+            break;
+        }
+        case 'o': {
+            config.tcp_host = std::string(optarg);
+            if (!validate_ip(config.tcp_host)) {
+                log_error("Invalid argument for tcp-host: Invalid IP address %s", optarg);
                 help(stderr);
                 return -EINVAL;
             }
@@ -437,6 +450,7 @@ static int parse_confs(ConfFile &conffile, Configuration &config)
     // clang-format off
     static const ConfFile::OptionsTable global_option_table[] = {
         {"TcpServerPort",       false, ConfFile::parse_ul,      OPTIONS_TABLE_STRUCT_FIELD(Configuration, tcp_port)},
+        {"TcpServerHost",       false, ConfFile::parse_str_dup, OPTIONS_TABLE_STRUCT_FIELD(Configuration, tcp_host)},
         {"ReportStats",         false, ConfFile::parse_bool,    OPTIONS_TABLE_STRUCT_FIELD(Configuration, report_msg_statistics)},
         {"DebugLogLevel",       false, parse_log_level,         OPTIONS_TABLE_STRUCT_FIELD(Configuration, debug_log_level)},
         {"DeduplicationPeriod", false, ConfFile::parse_ul,      OPTIONS_TABLE_STRUCT_FIELD(Configuration, dedup_period_ms)},

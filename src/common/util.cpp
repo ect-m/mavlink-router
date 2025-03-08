@@ -19,8 +19,9 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <stdlib.h>
+#include <regex>
 #include <string.h>
+#include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -174,4 +175,22 @@ int mkdir_p(const char *path, int len, mode_t mode)
     }
 
     return 0;
+}
+
+bool validate_ipv6(const std::string &ip)
+{
+    // simplyfied pattern
+    std::regex ipv6_regex(R"(\[(([a-f\d]{0,4}:)+[a-f\d]{0,4})\])");
+    return std::regex_match(ip, ipv6_regex);
+}
+
+bool validate_ipv4(const std::string &ip)
+{
+    std::regex ipv4_regex(R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}))");
+    return regex_match(ip, ipv4_regex);
+}
+
+bool validate_ip(const std::string &ip)
+{
+    return validate_ipv4(ip) || validate_ipv6(ip);
 }

@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <vector>
+#include <string>
 
 #include "macro.h"
 
@@ -48,6 +49,9 @@ int safe_atoul(const char *s, unsigned long *ret);
 int safe_atoi(const char *s, int *ret);
 usec_t now_usec();
 usec_t ts_usec(const struct timespec *ts);
+bool validate_ipv6(const std::string &ip);
+bool validate_ipv4(const std::string &ip);
+bool validate_ip(const std::string &ip);
 
 int mkdir_p(const char *path, int len, mode_t mode);
 

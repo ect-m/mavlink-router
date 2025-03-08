@@ -22,19 +22,47 @@ conf.set_quoted('PACKAGE', meson.project_name())
 cxx = meson.get_compiler('cpp')
 cc = meson.get_compiler('c')
 
+# Check if static build is requested
+static_build = get_option('static')
+if static_build
+    add_project_arguments('-static', language : 'c')
+    add_project_arguments('-static', language : 'cpp')
+    # Use static linking for all dependencies
+    add_project_link_arguments('-static', language : 'c')
+    add_project_link_arguments('-static', language : 'cpp')
+endif
+
 # Mandatory dependencies
-dep_math = cxx.find_library('m')
-dep_rt = cxx.find_library('rt')
-dep_thread = dependency('threads')
+dep_math = cxx.find_library('m', static: static_build)
+dep_rt = cxx.find_library('rt', static: static_build)
+dep_thread = dependency('threads', static: static_build)
 
 # Optional dependencies
 systemd_system_unit_dir = get_option('systemdsystemunitdir')
 if systemd_system_unit_dir == 'auto'
-		dep_systemd = dependency('systemd')
+		dep_systemd = dependency('systemd', static: static_build)
 		systemd_system_unit_dir = dep_systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
 endif
 
-dep_gtest = dependency('gtest', main : true, required : false)
+# Make GTest optional, especially for static builds
+build_tests = get_option('tests')
+if build_tests
+    if static_build
+        # Try to find static gtest, but make it optional
+        dep_gtest = dependency('gtest', main: true, required: false, static: true)
+        if not dep_gtest.found()
+            # If static gtest not found, disable tests for static builds
+            message('Static GTest libraries not found, disabling tests for static build')
+            build_tests = false
+        endif
+    else
+        # For dynamic builds, use regular gtest
+        dep_gtest = dependency('gtest', main: true, required: false)
+    endif
+else
+    # If tests are disabled, create a dummy dependency
+    dep_gtest = dependency('', required: false)
+endif
 
 # Additional warnings
 possible_cc_flags = [

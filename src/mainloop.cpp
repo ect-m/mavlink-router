@@ -417,7 +417,7 @@ bool Mainloop::add_endpoints(const Configuration &config)
 
     // Create TCP server
     if (config.tcp_port != 0u) {
-        g_tcp_fd = tcp_open(config.tcp_port);
+        g_tcp_fd = tcp_open(config.tcp_port, config.tcp_host);
     }
 
     // Create Log endpoint
@@ -466,28 +466,74 @@ void Mainloop::clear_endpoints()
     g_endpoints.clear();
 }
 
-int Mainloop::tcp_open(unsigned long tcp_port)
+int Mainloop::tcp_open(unsigned long tcp_port, const std::string &tcp_host)
 {
     int fd;
-    struct sockaddr_in6 sockaddr = {};
     int val = 1;
-
-    fd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
-    if (fd == -1) {
-        log_error("TCP Server: Could not create tcp socket (%m)");
-        return -1;
+    
+    // Check if we're using an IPv4 address
+    bool is_ipv4 = false;
+    if (!tcp_host.empty()) {
+        struct in_addr addr4;
+        is_ipv4 = (inet_pton(AF_INET, tcp_host.c_str(), &addr4) == 1);
     }
-
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
-
-    sockaddr.sin6_family = AF_INET6;
-    sockaddr.sin6_port = htons(tcp_port);
-    sockaddr.sin6_addr = in6addr_any;
-
-    if (bind(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
-        log_error("TCP Server: Could not bind to tcp socket (%m)");
-        close(fd);
-        return -1;
+    
+    // Create appropriate socket type based on the address
+    if (is_ipv4) {
+        struct sockaddr_in sockaddr4 = {};
+        
+        fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        if (fd == -1) {
+            log_error("TCP Server: Could not create tcp socket (%m)");
+            return -1;
+        }
+        
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+        
+        sockaddr4.sin_family = AF_INET;
+        sockaddr4.sin_port = htons(tcp_port);
+        
+        if (inet_pton(AF_INET, tcp_host.c_str(), &sockaddr4.sin_addr) != 1) {
+            log_error("TCP Server: Invalid IPv4 address: %s", tcp_host.c_str());
+            close(fd);
+            return -1;
+        }
+        
+        if (bind(fd, (struct sockaddr *)&sockaddr4, sizeof(sockaddr4)) < 0) {
+            log_error("TCP Server: Could not bind to tcp socket (%m)");
+            close(fd);
+            return -1;
+        }
+    } else {
+        // IPv6 socket
+        struct sockaddr_in6 sockaddr6 = {};
+        
+        fd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        if (fd == -1) {
+            log_error("TCP Server: Could not create tcp socket (%m)");
+            return -1;
+        }
+        
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+        
+        sockaddr6.sin6_family = AF_INET6;
+        sockaddr6.sin6_port = htons(tcp_port);
+        
+        if (!tcp_host.empty()) {
+            if (inet_pton(AF_INET6, tcp_host.c_str(), &sockaddr6.sin6_addr) != 1) {
+                log_error("TCP Server: Invalid IPv6 address: %s", tcp_host.c_str());
+                close(fd);
+                return -1;
+            }
+        } else {
+            sockaddr6.sin6_addr = in6addr_any;
+        }
+        
+        if (bind(fd, (struct sockaddr *)&sockaddr6, sizeof(sockaddr6)) < 0) {
+            log_error("TCP Server: Could not bind to tcp socket (%m)");
+            close(fd);
+            return -1;
+        }
     }
 
     if (listen(fd, SOMAXCONN) < 0) {
@@ -498,7 +544,7 @@ int Mainloop::tcp_open(unsigned long tcp_port)
 
     add_fd(fd, &g_tcp_fd, EPOLLIN);
 
-    log_info("Opened TCP Server [%d] [::]:%lu", fd, tcp_port);
+    log_info("Opened TCP Server [%d] [%s]:%lu", fd, tcp_host.empty() ? "::" : tcp_host.c_str(), tcp_port);
 
     return fd;
 }
